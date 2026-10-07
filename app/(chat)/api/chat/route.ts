@@ -1,3 +1,4 @@
+// Modified by Tumi with AI assistance: local setup and authentication improvements, October 2026.
 import {
   type Message,
   createDataStreamResponse,
@@ -42,6 +43,13 @@ export async function POST(request: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const fireworksKey = process.env.FIREWORKS_API_KEY;
+  if (!openaiKey || openaiKey === '****' ||
+    (selectedChatModel === 'chat-model-reasoning' && (!fireworksKey || fireworksKey === '****'))) {
+    return new Response('AI replies need an API key. Add your provider key to .env.local and restart the app.', { status: 503 });
+  }
+
   const userMessage = getMostRecentUserMessage(messages);
 
   if (!userMessage) {
@@ -49,6 +57,10 @@ export async function POST(request: Request) {
   }
 
   const chat = await getChatById({ id });
+
+  if (chat && chat.userId !== session.user.id) {
+    return new Response('Unauthorized', { status: 403 });
+  }
 
   if (!chat) {
     const title = await generateTitleFromUserMessage({ message: userMessage });

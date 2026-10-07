@@ -14,6 +14,7 @@ out/
 build
 
 # misc
+.local-data/
 .DS_Store
 *.pem
 

@@ -1,3 +1,47 @@
+# Tumi’s AI Chatbot Learning Project
+
+A full-stack AI chatbot learning project maintained by Tumi. This repository started from [Vercel’s AI Chatbot template](https://github.com/vercel/ai-chatbot); the original attribution and Apache 2.0 license are preserved.
+
+## Project additions
+
+- An opt-in embedded PostgreSQL database for local development, using PGlite and the existing Drizzle migrations.
+- Authentication routing fixes and a chat ownership check before saving messages.
+- A clear message when an AI provider key has not been configured.
+
+These additions were developed with AI assistance. This is a learning project, not a production-ready hosted service.
+
+## Run locally
+
+Use Node.js 20 or later and pnpm. Clone the repository, then run `pnpm install --frozen-lockfile`.
+
+Create `.env.local` with the following values:
+
+```dotenv
+AUTH_SECRET=replace-with-a-random-secret
+AUTH_URL=http://localhost:3000
+LOCAL_DATABASE_PATH=.local-data/postgres
+OPENAI_API_KEY=your-own-key
+```
+
+Generate an authentication secret with `openssl rand -hex 32`. Keep your API key on the server and never commit `.env.local`.
+
+```sh
+pnpm db:migrate:local
+pnpm dev
+```
+
+Open http://localhost:3000/register to create a local account. The default Small model uses OpenAI. AI requests use your provider account and may incur usage charges. The reasoning model additionally requires `FIREWORKS_API_KEY`; file uploads require `BLOB_READ_WRITE_TOKEN`.
+
+Accounts and chats persist in `.local-data/postgres`. This directory is excluded from Git. Local registration does not include email verification, password recovery, or abuse controls.
+
+## Hosted deployment
+
+The embedded database is for local development only. For hosting, remove `LOCAL_DATABASE_PATH`, configure a hosted `POSTGRES_URL`, and apply the original database migrations. Configure authentication and provider secrets in the host’s environment settings. Add rate limits, spending controls, and access controls before inviting public traffic.
+
+Making this repository public publishes its source code; it does not deploy the app or publish your local accounts and conversations.
+
+## Original template documentation
+
 <a href="https://chat.vercel.ai/">
   <img alt="Next.js 14 and App Router-ready AI chatbot." src="app/(chat)/opengraph-image.png">
   <h1 align="center">Next.js AI Chatbot</h1>
@@ -59,3 +103,4 @@ pnpm dev
 ```
 
 Your app template should now be running on [localhost:3000](http://localhost:3000/).
+

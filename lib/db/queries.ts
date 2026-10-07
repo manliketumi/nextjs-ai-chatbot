@@ -1,9 +1,9 @@
+// Modified by Tumi with AI assistance: local setup and authentication improvements, October 2026.
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
 import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { createDatabase } from './client';
 
 import {
   user,
@@ -23,8 +23,7 @@ import { ArtifactKind } from '@/components/artifact';
 // https://authjs.dev/reference/adapter/drizzle
 
 // biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
-const db = drizzle(client);
+const db = createDatabase();
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {

@@ -1,3 +1,4 @@
+// Modified by Tumi with AI assistance: local setup and authentication improvements, October 2026.
 import type { NextAuthConfig } from 'next-auth';
 
 export const authConfig = {
@@ -11,6 +12,8 @@ export const authConfig = {
   ],
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
+      // Auth.js must handle its own sign-in, CSRF, and session endpoints.
+      if (nextUrl.pathname.startsWith('/api/auth/')) return true;
       const isLoggedIn = !!auth?.user;
       const isOnChat = nextUrl.pathname.startsWith('/');
       const isOnRegister = nextUrl.pathname.startsWith('/register');

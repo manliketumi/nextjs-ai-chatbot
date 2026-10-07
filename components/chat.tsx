@@ -1,5 +1,7 @@
 'use client';
 
+// Modified by Tumi with AI assistance: local setup and authentication improvements, October 2026.
+
 import type { Attachment, Message } from 'ai';
 import { useChat } from 'ai/react';
 import { useState } from 'react';
@@ -52,7 +54,9 @@ export function Chat({
       mutate('/api/history');
     },
     onError: (error) => {
-      toast.error('An error occured, please try again!');
+      toast.error(error.message.includes('AI replies need an API key')
+        ? 'AI replies need an API key. Add your provider key to .env.local and restart the app.'
+        : 'Something went wrong. Please try again.');
     },
   });
 
