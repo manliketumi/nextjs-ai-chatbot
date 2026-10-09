@@ -6,10 +6,12 @@ import { cookies } from 'next/headers';
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
+  getChatById,
   updateChatVisiblityById,
 } from '@/lib/db/queries';
 import { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/models';
+import { auth } from '@/app/(auth)/auth';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -35,7 +37,15 @@ export async function generateTitleFromUserMessage({
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
   const [message] = await getMessageById({ id });
+  // Failed sends can leave a message in the browser without a saved record.
+  if (!message) return;
+
+  const chat = await getChatById({ id: message.chatId });
+  if (!chat || chat.userId !== session.user.id) throw new Error('Unauthorized');
 
   await deleteMessagesByChatIdAfterTimestamp({
     chatId: message.chatId,
@@ -52,3 +62,4 @@ export async function updateChatVisibility({
 }) {
   await updateChatVisiblityById({ chatId, visibility });
 }
+

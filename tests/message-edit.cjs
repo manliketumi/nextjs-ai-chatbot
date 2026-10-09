@@ -1,0 +1,25 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const ts = require('typescript');
+const code = ts.transpileModule(fs.readFileSync('app/(chat)/actions.ts', 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+let session, rows, owner, deletions;
+const db = {getMessageById:async()=>rows,getChatById:async()=>owner,deleteMessagesByChatIdAfterTimestamp:async(args)=>deletions.push(args)};
+const actionExports = {};
+vm.runInNewContext(code,{exports:actionExports,require:(name)=>name==='@/lib/db/queries'?db:name==='@/app/(auth)/auth'?{auth:async()=>session}:{},console});
+(async()=>{
+ session={user:{id:'owner'}};rows=[];deletions=[];
+ await actionExports.deleteTrailingMessages({id:'unsaved'});
+ assert.equal(deletions.length,0,'Unsaved message must be a safe no-op');
+ rows=[{chatId:'chat',createdAt:new Date(0)}];owner={userId:'other'};
+ await assert.rejects(actionExports.deleteTrailingMessages({id:'saved'}),/Unauthorized/);
+ assert.equal(deletions.length,0,'Another account must not delete messages');
+ owner={userId:'owner'};
+ await actionExports.deleteTrailingMessages({id:'saved'});
+ assert.equal(deletions.length,1);
+ assert.equal(deletions[0].chatId,'chat');
+ session=null;
+ await assert.rejects(actionExports.deleteTrailingMessages({id:'saved'}),/Unauthorized/);
+ assert.equal(deletions.length,1);
+ console.log('Passed: unsaved edit, ownership rejection, owned edit, signed-out rejection.');
+})().catch(e=>{console.error(e);process.exitCode=1});
