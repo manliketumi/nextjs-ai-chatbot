@@ -50,7 +50,7 @@ export function VisibilitySelector({
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
 
-  const { visibilityType, setVisibilityType } = useChatVisibility({
+  const { visibilityType, setVisibilityType, isUpdating } = useChatVisibility({
     chatId,
     initialVisibility: selectedVisibilityType,
   });
@@ -70,6 +70,7 @@ export function VisibilitySelector({
         )}
       >
         <Button
+          disabled={isUpdating}
           variant="outline"
           className="hidden md:flex md:px-2 md:h-[34px]"
         >
@@ -82,9 +83,10 @@ export function VisibilitySelector({
       <DropdownMenuContent align="start" className="min-w-[300px]">
         {visibilities.map((visibility) => (
           <DropdownMenuItem
+            disabled={isUpdating}
             key={visibility.id}
             onSelect={() => {
-              setVisibilityType(visibility.id);
+              void setVisibilityType(visibility.id);
               setOpen(false);
             }}
             className="gap-4 group/item flex flex-row justify-between items-center"

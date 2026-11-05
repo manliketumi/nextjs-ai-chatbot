@@ -23,9 +23,15 @@ export const requestSuggestions = ({
         .describe('The ID of the document to request edits'),
     }),
     execute: async ({ documentId }) => {
+      if (!session?.user?.id) return { error: 'Unauthorized' };
+
       const document = await getDocumentById({ id: documentId });
 
-      if (!document || !document.content) {
+      if (
+        !document ||
+        document.userId !== session.user.id ||
+        !document.content
+      ) {
         return {
           error: 'Document not found',
         };

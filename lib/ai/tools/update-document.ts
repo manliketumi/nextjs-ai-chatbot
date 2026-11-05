@@ -1,7 +1,7 @@
 import { DataStreamWriter, tool } from 'ai';
 import { Session } from 'next-auth';
 import { z } from 'zod';
-import { getDocumentById, saveDocument } from '@/lib/db/queries';
+import { getDocumentById } from '@/lib/db/queries';
 import { documentHandlersByArtifactKind } from '@/lib/artifacts/server';
 
 interface UpdateDocumentProps {
@@ -19,9 +19,11 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
         .describe('The description of changes that need to be made'),
     }),
     execute: async ({ id, description }) => {
+      if (!session?.user?.id) return { error: 'Unauthorized' };
+
       const document = await getDocumentById({ id });
 
-      if (!document) {
+      if (!document || document.userId !== session.user.id) {
         return {
           error: 'Document not found',
         };

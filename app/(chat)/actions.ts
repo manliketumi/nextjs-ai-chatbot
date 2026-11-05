@@ -12,6 +12,7 @@ import {
 import { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/models';
 import { auth } from '@/app/(auth)/auth';
+import { z } from 'zod';
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -39,6 +40,7 @@ export async function generateTitleFromUserMessage({
 export async function deleteTrailingMessages({ id }: { id: string }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
+  z.string().uuid().parse(id);
 
   const [message] = await getMessageById({ id });
   // Failed sends can leave a message in the browser without a saved record.
@@ -60,6 +62,16 @@ export async function updateChatVisibility({
   chatId: string;
   visibility: VisibilityType;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  z.object({
+    chatId: z.string().uuid(),
+    visibility: z.enum(['private', 'public']),
+  }).parse({ chatId, visibility });
+
+  const chat = await getChatById({ id: chatId });
+  if (!chat || chat.userId !== session.user.id) throw new Error('Unauthorized');
+
   await updateChatVisiblityById({ chatId, visibility });
 }
-

@@ -1,22 +1,32 @@
 import { auth } from '@/app/(auth)/auth';
-import { ArtifactKind } from '@/components/artifact';
+import { z } from 'zod';
 import {
   deleteDocumentsByIdAfterTimestamp,
   getDocumentsById,
   saveDocument,
 } from '@/lib/db/queries';
 
+const idSchema = z.string().uuid();
+const documentSchema = z.object({
+  content: z.string(),
+  title: z.string().min(1),
+  kind: z.enum(['text', 'code', 'image', 'sheet']),
+});
+const rollbackSchema = z.object({
+  timestamp: z.string().datetime({ offset: true }),
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
-  if (!id) {
-    return new Response('Missing id', { status: 400 });
+  if (!id || !idSchema.safeParse(id).success) {
+    return new Response('Invalid document id', { status: 400 });
   }
 
   const session = await auth();
 
-  if (!session || !session.user) {
+  if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -28,8 +38,9 @@ export async function GET(request: Request) {
     return new Response('Not Found', { status: 404 });
   }
 
-  if (document.userId !== session.user.id) {
-    return new Response('Unauthorized', { status: 401 });
+  const userId = session.user.id;
+  if (documents.some((version) => version.userId !== userId)) {
+    return new Response('Forbidden', { status: 403 });
   }
 
   return Response.json(documents, { status: 200 });
@@ -39,64 +50,73 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
-  if (!id) {
-    return new Response('Missing id', { status: 400 });
+  if (!id || !idSchema.safeParse(id).success) {
+    return new Response('Invalid document id', { status: 400 });
   }
 
   const session = await auth();
 
-  if (!session) {
+  if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const {
-    content,
-    title,
-    kind,
-  }: { content: string; title: string; kind: ArtifactKind } =
-    await request.json();
-
-  if (session.user?.id) {
-    const document = await saveDocument({
-      id,
-      content,
-      title,
-      kind,
-      userId: session.user.id,
-    });
-
-    return Response.json(document, { status: 200 });
+  const body = await request.json().catch(() => null);
+  const parsed = documentSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response('Invalid document', { status: 400 });
   }
-  return new Response('Unauthorized', { status: 401 });
+
+  const documents = await getDocumentsById({ id });
+  const userId = session.user.id;
+  if (documents.some((version) => version.userId !== userId)) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  const document = await saveDocument({
+    id,
+    ...parsed.data,
+    userId: session.user.id,
+  });
+
+  return Response.json(document, { status: 200 });
 }
 
 export async function PATCH(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
-  const { timestamp }: { timestamp: string } = await request.json();
-
-  if (!id) {
-    return new Response('Missing id', { status: 400 });
+  if (!id || !idSchema.safeParse(id).success) {
+    return new Response('Invalid document id', { status: 400 });
   }
 
   const session = await auth();
 
-  if (!session || !session.user) {
+  if (!session?.user?.id) {
     return new Response('Unauthorized', { status: 401 });
+  }
+
+  const body = await request.json().catch(() => null);
+  const parsed = rollbackSchema.safeParse(body);
+  if (!parsed.success) {
+    return new Response('Invalid rollback timestamp', { status: 400 });
   }
 
   const documents = await getDocumentsById({ id });
 
   const [document] = documents;
 
-  if (document.userId !== session.user.id) {
-    return new Response('Unauthorized', { status: 401 });
+  if (!document) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  const userId = session.user.id;
+  if (documents.some((version) => version.userId !== userId)) {
+    return new Response('Forbidden', { status: 403 });
   }
 
   await deleteDocumentsByIdAfterTimestamp({
     id,
-    timestamp: new Date(timestamp),
+    timestamp: new Date(parsed.data.timestamp),
   });
 
   return new Response('Deleted', { status: 200 });

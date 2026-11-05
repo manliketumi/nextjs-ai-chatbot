@@ -6,6 +6,8 @@
     "dev": "next dev --turbo",
     "build": "tsx lib/db/migrate && next build",
     "start": "next start",
+    "test": "node --test tests/*.test.cjs",
+    "test:seed": "node tests/seed-local.cjs",
     "lint": "next lint && biome lint --write --unsafe",
     "lint:fix": "next lint --fix && biome lint --write --unsafe",
     "format": "biome format --write",
