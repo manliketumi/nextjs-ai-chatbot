@@ -34,6 +34,29 @@ Open http://localhost:3000/register to create a local account. The default Small
 
 Accounts and chats persist in `.local-data/postgres`. This directory is excluded from Git. Local registration does not include email verification, password recovery, or abuse controls.
 
+## Regression tests
+
+Run `pnpm test`. The suite applies the real migrations to a fresh, in-memory
+PGlite database and loads fixtures for two accounts, private and shared chats,
+messages, votes, document versions, and suggestions. It exercises the production
+server actions, API handlers, and queries to verify ownership enforcement,
+missing-record handling, and valid edits and rollbacks.
+
+Authentication and AI responses are replaced at their boundaries. The tests do
+not load `.env.local`, contact AI providers, or use the hosted database. Browser
+sign-in and real model streaming still need a separate smoke test before release.
+
+For manual browser checks, `pnpm test:seed` creates a separate database at
+`.local-data/fixture-review`. It refuses to overwrite an existing database and
+ignores your configured database URL. Start the dev server with
+`LOCAL_DATABASE_PATH=.local-data/fixture-review` and a local authentication secret
+and URL. The two fixture accounts are `owner@example.test` and
+`other@example.test`, both with the local-only password `fixture-only-password`.
+Never use these accounts or credentials in a hosted environment.
+This manual fixture database is disposable: this PGlite version failed to reopen
+after stopping the dev server during verification. The automatic tests use a
+fresh in-memory database each run and do not depend on the manual database.
+
 ## Hosted deployment
 
 The embedded database is for local development only. For hosting, remove `LOCAL_DATABASE_PATH`, configure a hosted `POSTGRES_URL`, and apply the original database migrations. Configure authentication and provider secrets in the host’s environment settings. Add rate limits, spending controls, and access controls before inviting public traffic.

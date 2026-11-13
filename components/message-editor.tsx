@@ -72,6 +72,7 @@ export function MessageEditor({
           disabled={isSubmitting}
           onClick={async () => {
             setIsSubmitting(true);
+            try {
 
             await deleteTrailingMessages({
               id: message.id,
@@ -93,7 +94,12 @@ export function MessageEditor({
             });
 
             setMode('view');
-            reload();
+            await reload();
+            } catch {
+              toast.error('Could not update this message. Please try again.');
+            } finally {
+              setIsSubmitting(false);
+            }
           }}
         >
           {isSubmitting ? 'Sending...' : 'Send'}
@@ -102,3 +108,4 @@ export function MessageEditor({
     </div>
   );
 }
+
